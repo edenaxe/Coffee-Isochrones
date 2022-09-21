@@ -1,0 +1,136 @@
+---
+title: "Culver City Coffee Isochrone Map"
+author: "Eden Axelrad"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+# Load required libraries
+library(tidyverse)
+library(openrouteservice)
+library(osmdata)
+library(ggplot2)
+library(sf)
+library(leaflet)
+
+```
+
+## Get OSM Data
+
+```{r osm}
+
+# Create a bounding box for Culver City, our area of interest
+cc_bb <- getbb("Culver City")
+
+# Use Open Street Map data to retrieve coffee shops within our bounding box
+cc_coffee <- cc_bb %>%
+  opq() %>%
+  add_osm_feature(key = "cuisine", value = "coffee_shop") %>%
+  osmdata_sf()
+
+# Clean up the point data so we only have locations with associated names
+coffee_df <- cc_coffee$osm_points %>%
+  drop_na(name) %>%
+  mutate(char_geo = as.character(geometry)) %>%
+  separate(char_geo, c("lon", "lat"), sep = ",") %>%
+  mutate(lon = as.numeric(gsub(x = lon,
+                               pattern = "c(", 
+                               replacement = "",
+                               fixed = TRUE)),
+         lat = as.numeric(gsub(x = lat,
+                               pattern = ")", 
+                               replacement = "",
+                               fixed = TRUE))) %>%
+  select(osm_id, name, lon, lat, geometry)
+
+```
+
+## Create Isochrones
+
+```{r ORS}
+
+# Add personal API key
+ors_api_key("5b3ce3597851110001cf6248c325aa45be134dc5b91dd346b94d0c4f")
+
+
+# Create a function to retrieve an isochrone map for a specified location
+get_iso <- function(name, longitude, latitude) {
+  
+  coordinates <- data.frame(lon = c(longitude), lat = c(latitude))
+  cc_iso <- ors_isochrones(locations = coordinates, profile = "foot-walking", range = 600, interval = 150, output = "sf")
+  cc_iso$shop <- name
+  cc_iso
+  
+}
+
+# Iterate over all locations in our data frame
+# Add walk distance (time) column and dissolve by walk time
+Coffee_Shops <- pmap(
+  list(name = coffee_df$name,
+       longitude = coffee_df$lon,
+       latitude = coffee_df$lat),
+  .f = get_iso) %>%
+  bind_rows() %>%
+  mutate(
+    dist_cat = paste0(value/60, " min"),
+    dist_cat = fct_reorder(dist_cat, desc(value))) %>%
+  group_by(dist_cat) %>%
+  summarize(geometry = st_union(geometry))
+
+
+```
+
+## Generate a Leaflet Map
+
+```{r leaflet}
+
+# Create the icon sets to be used with our leaflet map
+icons <- iconList(
+  "Starbucks" = makeIcon(
+    iconUrl = "https://img.icons8.com/color/344/starbucks.png",
+    iconWidth = 30,
+    iconHeight = 30),
+  "Other" = makeIcon(
+    iconUrl = "https://img.icons8.com/ios-filled/452/coffee-beans---v2.png",
+    iconWidth = 20,
+    iconHeight = 20))
+
+
+# Create the distance interval color pallete 
+factpal <- colorFactor(topo.colors(4), Coffee_Shops$dist_cat)
+
+
+# Creat the leaflet map! 
+coffee_leaf <- leaflet() %>%
+  addProviderTiles("CartoDB.Positron", group = "Light") %>%
+  addProviderTiles("Esri.WorldStreetMap", group = "Street Map") %>%
+  addProviderTiles("Esri.WorldImagery", group = "Satellite") %>%
+  addLayersControl(
+    baseGroups = c("Light", "Street Map", "Satellite"),
+    position = "topleft") %>%
+  addMarkers(
+    data = coffee_df %>%
+      mutate(name2 = ifelse(grepl("Starbucks", name, fixed = TRUE), 
+                            "Starbucks", 
+                            "Other")),
+    lat = coffee_df$lat,
+    lng = coffee_df$lon,
+    label = coffee_df$name,
+    icon = ~ icons[name2],
+  ) %>%
+  addPolygons(
+    data = Coffee_Shops,
+    color = ~factpal(dist_cat),
+    opacity = 0,
+    fillOpacity = 0.4) %>%
+  addLegend(
+    pal = factpal,
+    values = Coffee_Shops$dist_cat,
+    position = "bottomright",
+    title = "Walking Time"
+  )
+
+coffee_leaf
+
+```
