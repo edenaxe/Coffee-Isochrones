@@ -1,2 +1,2 @@
 # Gym-Isochrones
-Geospatial analysis using climbing gyms and cycling isochrones
+Geospatial analysis using of nearby coffee shops and walking isochrones
