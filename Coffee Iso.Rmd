@@ -23,13 +23,14 @@ library(leaflet)
 # Create a bounding box for Culver City, our area of interest
 cc_bb <- getbb("Culver City")
 
-# Use Open Street Map data to retrieve coffee shops within our bounding box
+# Use an overapss query (Open Street Map) to retrieve coffee shops within our bounding box
 cc_coffee <- cc_bb %>%
   opq() %>%
   add_osm_feature(key = "cuisine", value = "coffee_shop") %>%
   osmdata_sf()
 
 # Clean up the point data so we only have locations with associated names
+# Add latitude and longitude numeric columns based on the point geometries
 coffee_df <- cc_coffee$osm_points %>%
   drop_na(name) %>%
   mutate(char_geo = as.character(geometry)) %>%
