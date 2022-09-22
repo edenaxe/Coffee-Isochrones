@@ -13,6 +13,7 @@ library(osmdata)
 library(ggplot2)
 library(sf)
 library(leaflet)
+library(dotenv)
 
 ```
 
@@ -51,9 +52,9 @@ coffee_df <- cc_coffee$osm_points %>%
 
 ```{r ORS}
 
-# Add personal API key
-ors_api_key("5b3ce3597851110001cf6248c325aa45be134dc5b91dd346b94d0c4f")
-
+# Add personal API key, use dotenv for security purposes
+load_dot_env(file = '.env')
+ors_api_key(Sys.getenv("ORS_API"))
 
 # Create a function to retrieve an isochrone map for a specified location
 get_iso <- function(name, longitude, latitude) {
