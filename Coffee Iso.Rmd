@@ -112,13 +112,11 @@ coffee_leaf <- leaflet() %>%
     position = "topleft") %>%
   addMarkers(
     data = coffee_df %>%
-      mutate(name2 = ifelse(grepl("Starbucks", name, fixed = TRUE), 
-                            "Starbucks", 
-                            "Other")),
+      mutate(icon = ifelse(grepl("Starbucks", name, fixed = TRUE), "Starbucks", "Other")),
     lat = coffee_df$lat,
     lng = coffee_df$lon,
     label = coffee_df$name,
-    icon = ~ icons[name2],
+    icon = ~ icons[icon],
   ) %>%
   addPolygons(
     data = Coffee_Shops,
