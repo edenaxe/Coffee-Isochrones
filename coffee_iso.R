@@ -44,7 +44,7 @@ coffee_df <- cc_coffee$osm_points %>%
 ### Part 2 - ORS Isochrones ----------------------
 
 # Add personal API key
-ors_api_key("5b3ce3597851110001cf6248c325aa45be134dc5b91dd346b94d0c4f")
+ors_api_key(API_Token)
 
 
 # Create a function to retrieve an isochrone map for a specified location
