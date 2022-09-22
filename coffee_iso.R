@@ -8,6 +8,7 @@ library(ggplot2)
 library(ggmap)
 library(sf)
 library(leaflet)
+library(dotenv)
 
 
 ### Part 1 - OSM Data ----------------------
@@ -44,7 +45,8 @@ coffee_df <- cc_coffee$osm_points %>%
 ### Part 2 - ORS Isochrones ----------------------
 
 # Add personal API key
-ors_api_key(API_Token)
+load_dot_env(file = '.env')
+ors_api_key(Sys.getenv("ORS_API"))
 
 
 # Create a function to retrieve an isochrone map for a specified location
