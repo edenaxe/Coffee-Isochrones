@@ -1,2 +1,0 @@
-# Ignore .env file which houses our API key
-*.env
