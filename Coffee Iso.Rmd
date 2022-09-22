@@ -84,7 +84,7 @@ Coffee_Shops <- pmap(
 
 ## Generate a Leaflet Map
 
-```{r leaflet}
+```{r leaflet setup}
 
 # Create the icon sets to be used with our leaflet map
 icons <- iconList(
@@ -102,34 +102,51 @@ icons <- iconList(
 factpal <- colorFactor(topo.colors(4), Coffee_Shops$dist_cat)
 
 
-# Creat the leaflet map! 
+# Add a Culver City boundary
+query_URL <- 'https://public.gis.lacounty.gov/public/rest/services/LACounty_Dynamic/Political_Boundaries/MapServer/19/query?where=1%3D1&outFields=CITY_NAME&outSR=4326&f=json'
+
+city_boundary <- httr::GET(query_URL) %>%
+  st_read() %>%
+  filter(CITY_NAME == "Culver City")
+
+```
+
+```{r leaflet map}
+
+# Create the leaflet map! 
 coffee_leaf <- leaflet() %>%
   addProviderTiles("CartoDB.Positron", group = "Light") %>%
   addProviderTiles("Esri.WorldStreetMap", group = "Street Map") %>%
   addProviderTiles("Esri.WorldImagery", group = "Satellite") %>%
-  addLayersControl(
-    baseGroups = c("Light", "Street Map", "Satellite"),
-    position = "topleft") %>%
+  addPolygons(
+    data = city_boundary,
+    color = "#2c2a2a",
+    dashArray = "3",
+    opacity = 0.7,
+    weight = 0.8,
+    fillOpacity = 0) %>%
+  addPolygons(
+    data = Coffee_Shops,
+    color = ~factpal(dist_cat),
+    opacity = 0,
+    fillOpacity = 0.4) %>%
   addMarkers(
     data = coffee_df %>%
       mutate(icon = ifelse(grepl("Starbucks", name, fixed = TRUE), "Starbucks", "Other")),
     lat = coffee_df$lat,
     lng = coffee_df$lon,
     label = coffee_df$name,
-    icon = ~ icons[icon],
-  ) %>%
-  addPolygons(
-    data = Coffee_Shops,
-    color = ~factpal(dist_cat),
-    opacity = 0,
-    fillOpacity = 0.4) %>%
+    icon = ~ icons[icon]) %>%
   addLegend(
     pal = factpal,
     values = Coffee_Shops$dist_cat,
     position = "bottomright",
-    title = "Walking Time"
-  )
+    title = "Walking Time") %>%
+  addLayersControl(
+    baseGroups = c("Light", "Street Map", "Satellite"),
+    position = "topleft")
 
 coffee_leaf
 
 ```
+
